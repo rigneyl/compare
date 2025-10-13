@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PAT Product Selection Tool — v5</title>
+
+  <!-- Google Fonts: Inter 400 & 700 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =========================================
+       THEME — Scheme 1 from your palette.html
+       Light mode only
+    ==========================================*/
+    :root{
+      --bg:#f7f7f7; --surface:#ffffff; --surface-2:#f7f7f7; --border:#dddddd;
+      --muted:#6f6f6f; --text:#312f2f; --accent:#cc0000; --accent-2:#a80000; --link:#cc0000;
+      --shadow:0 2px 6px rgba(0,0,0,.08); --radius:12px; --radius-sm:10px; --ring:0 0 0 3px rgba(204,0,0,.18);
+      --tab-bg:#f1f1f1; --tab-active:#ffe5e5;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    a{color:var(--link);text-decoration:none}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+
+    /* HEADER */
+    header{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:8px 0 16px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--accent)}
+    .title{font-weight:700;letter-spacing:.2px}
+    .sub{font-size:12px;color:var(--muted)}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);padding:6px;border-radius:999px;box-shadow:var(--shadow)}
+    .tab{padding:10px 14px;border-radius:999px;background:var(--tab-bg);border:1px solid var(--border);cursor:pointer;user-select:none;transition:.25s;font-weight:700;color:#4d4d4d}
+    .tab:hover{filter:brightness(0.98)}
+    .tab.active{background:var(--tab-active);border-color:#ffd0d0;box-shadow:var(--ring);color:#7a0000}
+    .panel{display:none;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s}
+    .panel.active{display:block;opacity:1;transform:none}
+
+    /* LAYOUT */
+    .row{display:grid;grid-template-columns:320px 1fr;gap:20px}
+    @media (max-width:980px){.row{grid-template-columns:1fr}}
+    aside.card{position:sticky;top:16px;height:max-content}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    h2{margin:0 0 10px 0;font-size:18px}
+    .muted{color:var(--muted)}
+    .divider{height:1px;background:var(--border);margin:14px 0}
+    .section-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 6px}
+    .controls{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:8px 12px;background:var(--surface);transition:.2s;font-weight:700}
+    .chip input{accent-color:var(--accent)}
+    .chip:hover{box-shadow:var(--ring)}
+    .frow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .frow>label{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);padding:10px;border-radius:var(--radius-sm);background:var(--surface)}
+    .frow select,.frow input[type="number"],.frow input[type="text"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#fbfbfb;color:var(--text)}
+    .frow input:focus,.frow select:focus{outline:none;box-shadow:var(--ring);border-color:#ffb3b3}
+    .results-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0}
+    .pill{padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:#fbfbfb;font-weight:700}
+
+    /* CARDS */
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    @media (max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:700px){.grid{grid-template-columns:1fr}}
+    .product{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px;position:relative;box-shadow:var(--shadow);transition:transform .18s ease,box-shadow .18s ease}
+    .product:hover{transform:translateY(-2px);box-shadow:0 2px 6px rgba(0,0,0,.06),0 14px 28px rgba(0,0,0,.06)}
+    .product .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .product .name{font-weight:700}
+    .kicker{font-size:12px;color:var(--muted)}
+    .badges{display:flex;flex-wrap:wrap;gap:6px}
+    .badge{font-size:12px;padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#f7f7f7;font-weight:700}
+    details{background:#fbfbfb;border:1px dashed var(--border);border-radius:10px;padding:10px}
+    summary{cursor:pointer}
+    .actions{display:flex;gap:8px;margin-top:auto}
+    .btn{padding:10px 12px;border-radius:10px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;transition:.2s;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+    .btn:hover{background:var(--accent-2);border-color:var(--accent-2)}
+    .btn.ghost{background:#ffffff;color:var(--accent);border:2px solid var(--accent)}
+    .btn.ghost:hover{background:#fff1f1}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+
+    /* TABLES / COMPARE */
+    .compare-wrap{margin-top:16px}
+    table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+    th,td{padding:12px;border-bottom:1px solid var(--border);font-size:14px}
+    thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+    tbody tr:nth-child(even){background:#fafafa}
+    tbody tr:hover{background:#fff1f1}
+    .sticky-name{position:sticky;left:0;background:inherit;border-right:1px solid var(--border);z-index:2}
+
+    /* NOTICES / TOAST */
+    .note{padding:12px;border-radius:10px;background:var(--surface);border:1px dashed var(--border);color:var(--muted)}
+    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:2px solid var(--accent);box-shadow:var(--shadow);border-radius:999px;padding:10px 14px;opacity:0;transition:.25s;pointer-events:none;color:var(--text)}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a10 10 0 0 1 14.13-3.36L23 7"></path>
+            <path d="M20.49 15A10 10 0 0 1 6.36 18.36L1 17"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="title">Test &amp; Tag Supplies — Product Selector</div>
+          <div class="sub">Find the best PAT tester by features, quickly.</div>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Main Sections">
+        <button class="tab active" data-tab="filter">Filter</button>
+        <button class="tab" data-tab="wizard">Wizard</button>
+        <button class="tab" data-tab="compare">Compare</button>
+      </nav>
+    </header>
+
+    <!-- FILTER MODE -->
+    <section id="filter" class="panel active">
+      <div class="row">
+        <aside class="card" aria-label="Filters">
+          <h2>Filters</h2>
+          <p class="muted">Pick must-haves, then refine. Sidebar stays put on desktop.</p>
+          <div class="divider"></div>
+
+          <div class="section-label">Search</div>
+          <div class="frow" style="grid-template-columns:1fr; margin-bottom:8px;">
+            <label>
+              <input id="q" type="text" placeholder="Search model name…" />
+            </label>
+          </div>
+
+          <div class="section-label">Key features</div>
+          <div class="controls" style="margin-bottom:8px">
+            <label class="chip"><input type="checkbox" data-key="PortableRCD"/> Portable RCD</label>
+            <label class="chip"><input type="checkbox" data-key="FixedRCD"/> Fixed RCD</label>
+            <label class="chip"><input type="checkbox" data-key="Printer"/> Printer</label>
+            <label class="chip"><input type="checkbox" data-key="Comms"/> Communications</label>
+            <label class="chip"><input type="checkbox" data-key="ThreePhase"/> 3-Phase Leakage</label>
+            <label class="chip"><input type="checkbox" data-key="Recording"/> Recording</label>
+          </div>
+
+          <details>
+            <summary class="muted">Advanced filters</summary>
+            <div class="controls" style="margin-top:10px">
+              <label class="chip"><input type="checkbox" data-key="ProgSeq"/> Programmable Sequences</label>
+              <label class="chip"><input type="checkbox" data-key="Rechargeable"/> Mains-Rechargeable</label>
+            </div>
+            <div class="divider"></div>
+            <div class="frow">
+              <label>Outlet socket
+                <select id="outlet">
+                  <option value="">Any</option>
+                  <option>15A</option>
+                  <option>16A</option>
+                  <option>20A</option>
+                </select>
+              </label>
+              <label>Max current leakage (min)
+                <select id="maxLeak">
+                  <option value="">Any</option>
+                  <option value="10">≥ 10A</option>
+                  <option value="16">≥ 16A</option>
+                  <option value="20">≥ 20A</option>
+                </select>
+              </label>
+              <label>Max weight (kg)
+                <input id="maxWeight" type="number" step="0.1" min="0" placeholder="e.g. 1.5"/>
+              </label>
+              <label>Battery type
+                <select id="battery">
+                  <option value="">Any</option>
+                  <option>Li-Ion</option>
+                  <option>Alkaline</option>
+                  <option>NiMh</option>
+                </select>
+              </label>
+            </div>
+          </details>
+
+          <div class="divider"></div>
+          <div class="controls">
+            <button class="btn ghost" id="clearFilters" type="button">Clear filters</button>
+            <button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
+          </div>
+        </aside>
+
+        <main>
+          <div class="results-head">
+            <div class="kpi"><span class="pill">Matching</span> <strong id="matchCount">0</strong></div>
+            <div class="switch">
+              <label class="chip"><input type="checkbox" id="showTable"/> Show as table</label>
+            </div>
+          </div>
+
+          <div id="cardResults" class="grid" aria-live="polite"></div>
+
+          <div id="tableResults" style="display:none">
+            <div class="compare-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="sticky-name">Model</th>
+                    <th>Portable RCD</th>
+                    <th>Fixed RCD</th>
+                    <th>Printer</th>
+                    <th>Comms</th>
+                    <th>3-Phase</th>
+                    <th>Recording</th>
+                    <th>Outlet</th>
+                    <th>Max Leak</th>
+                    <th>Battery</th>
+                    <th>Weight</th>
+                    <th>Add</th>
+                    <th>View</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- WIZARD MODE -->
+    <section id="wizard" class="panel">
+      <div class="card">
+        <h2>Quick Wizard</h2>
+        <p class="muted">Answer a few questions — we’ll shortlist models and show reasons.</p>
+        <div class="divider"></div>
+        <div class="frow" style="grid-template-columns:repeat(3,1fr)">
+          <label><input type="checkbox" id="w_need_printer"/> Need Printer</label>
+          <label><input type="checkbox" id="w_need_three"/> Need 3-Phase Leakage</label>
+          <label><input type="checkbox" id="w_need_record"/> Need Recording</label>
+        </div>
+        <div class="frow" style="margin-top:8px">
+          <label>Max weight (kg)
+            <input type="number" id="w_max_w" step="0.1" min="0" placeholder="e.g. 1.5" />
+          </label>
+          <label>Outlet socket
+            <select id="w_outlet">
+              <option value="">Any</option>
+              <option>15A</option>
+              <option>16A</option>
+              <option>20A</option>
+            </select>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div class="controls">
+          <button class="btn" id="runWizard" type="button">Run wizard</button>
+        </div>
+      </div>
+
+      <div class="results-head" style="margin-top:12px">
+        <div class="kpi"><span class="pill">Wizard matches</span> <strong id="wizCount">0</strong></div>
+      </div>
+      <div id="wizResults" class="grid"></div>
+    </section>
+
+    <!-- COMPARE -->
+    <section id="compare" class="panel">
+      <div class="card">
+        <h2>Comparison</h2>
+        <div id="compareEmpty" class="note">No items yet. Add some models from the results.</div>
+        <div id="compareWrap" class="compare-wrap" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th class="sticky-name">Model</th>
+                <th>Portable RCD</th>
+                <th>Fixed RCD</th>
+                <th>Printer</th>
+                <th>Comms</th>
+                <th>3-Phase</th>
+                <th>Recording</th>
+                <th>Data Entry</th>
+                <th>Battery</th>
+                <th>Outlet</th>
+                <th>Max Leak</th>
+                <th>Weight</th>
+                <th>Case</th>
+                <th>View</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="compareBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // =========================================
+    // BUY URLS — supplied list
+    // =========================================
+    const BUY_URLS = {
+      WAVTNTEB: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/wavecom-g5-tnt-elb-battery-operated-appliance-tester',
+      WAVTNTRC: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/wavecom-g5-tnt-rcd-appliance-tester',
+      WAVTNTRX: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/wavecom-g5-tnt-rcd-x-20a-appliance-tester',
+      WAVTITAN: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/wavecom-tnt-titan-appliance-tester-with-10a-load-test',
+      WAVTIT20: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/wavecom-tnt-titan-appliance-tester-with-20a-load-test',
+      TRI000S8: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/trisan-s8-portable-appliance-tester',
+      TRIS80DL: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/trisan-s8-dl',
+      KYR6205A: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/kyoritsu-6205-appliance-tester',
+      SEA0125EL:'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/seaward-primetest-125el-portable-appliance-tester',
+      SEA3760D: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/seaward-pac3760-dl-appliance-tester',
+      MET3309B: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/metrel-delta-pat-3309-bt-appliance-tester',
+      MET03340: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/metrel-alpha-ee-xa-mi3340-appliance-tester',
+      SEA01PRO: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/seaward-primetest-pro-appliance-tester',
+      SEA01ELT: 'https://testandtagsupplies.com.au/collections/portable-appliance-testers/products/seaward-primetest-elite'
+    };
+
+    // =========================================
+    // DATA — from your matrix
+    // =========================================
+    const RAW = [
+      {id:'WAVTNTEB', name:'WAVTNTEB', PortableRCD:'NO',                 FixedRCD:'NO',  Outlet:'15A', MaxLeak:'10A', Battery:'Li-Ion',   Rechargeable:'YES', ProgSeq:'NO',  Recording:'NO',  RecordsDesc:'NO', DataEntry:'NO',          RecallID:'NO',  Printer:'NO',  Comms:'NO',  ThreePhase:'NO',  Weight:'1.5 kg', Case:'SOFT'},
+      {id:'WAVTNTRC', name:'WAVTNTRC', PortableRCD:'Yes- Latching only', FixedRCD:'YES', Outlet:'15A', MaxLeak:'10A', Battery:'Li-Ion',   Rechargeable:'YES', ProgSeq:'NO',  Recording:'NO',  RecordsDesc:'NO', DataEntry:'NO',          RecallID:'NO',  Printer:'NO',  Comms:'NO',  ThreePhase:'NO',  Weight:'1.5 kg', Case:'SOFT'},
+      {id:'WAVTNTRX', name:'WAVTNTRX', PortableRCD:'Yes- Latching only', FixedRCD:'YES', Outlet:'20A', MaxLeak:'20A', Battery:'Li-Ion',   Rechargeable:'YES', ProgSeq:'NO',  Recording:'NO',  RecordsDesc:'NO', DataEntry:'NO',          RecallID:'NO',  Printer:'NO',  Comms:'NO',  ThreePhase:'NO',  Weight:'1.5 kg', Case:'SOFT'},
+      {id:'WAVTITAN', name:'WAVTITAN', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'10A', Battery:'Li-Ion',   Rechargeable:'YES', ProgSeq:'NO',  Recording:'YES', RecordsDesc:'YES', DataEntry:'APP',        RecallID:'YES', Printer:'YES', Comms:'YES', ThreePhase:'NO',  Weight:'1.8 kg', Case:'SOFT'},
+      {id:'WAVTIT20', name:'WAVTIT20', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'20A', MaxLeak:'20A', Battery:'Li-Ion',   Rechargeable:'YES', ProgSeq:'NO',  Recording:'YES', RecordsDesc:'YES', DataEntry:'APP',        RecallID:'YES', Printer:'YES', Comms:'YES', ThreePhase:'NO',  Weight:'1.8 kg', Case:'SOFT'},
+      {id:'TRI000S8', name:'TRI000S8', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'20A', MaxLeak:'20A', Battery:'Alkaline', Rechargeable:'NO',  ProgSeq:'NO',  Recording:'NO',  RecordsDesc:'NO', DataEntry:'NO',          RecallID:'NO',  Printer:'NO',  Comms:'NO',  ThreePhase:'YES', Weight:'2 kg',   Case:'HARD'},
+      {id:'TRIS80DL', name:'TRIS80DL', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'20A', MaxLeak:'20A', Battery:'Alkaline', Rechargeable:'NO',  ProgSeq:'NO',  Recording:'YES', RecordsDesc:'YES', DataEntry:'KEYPAD',     RecallID:'NO',  Printer:'YES', Comms:'YES', ThreePhase:'YES', Weight:'2 kg',   Case:'HARD'},
+      {id:'KYR6205A', name:'KYR6205A', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'10A', Battery:'Alkaline', Rechargeable:'NO',  ProgSeq:'NO',  Recording:'YES', RecordsDesc:'NO',  DataEntry:'NO',          RecallID:'NO',  Printer:'NO',  Comms:'',     ThreePhase:'YES', Weight:'0.93 kg',Case:'SOFT'},
+      {id:'SEA0125EL',name:'SEA0125EL',PortableRCD:'NO',                 FixedRCD:'NO',  Outlet:'15A', MaxLeak:'10A', Battery:'Alkaline', Rechargeable:'NO',  ProgSeq:'NO',  Recording:'NO',  RecordsDesc:'NO', DataEntry:'NO',          RecallID:'NO',  Printer:'NO',  Comms:'NO',  ThreePhase:'NO',  Weight:'0.8 kg', Case:'SOFT'},
+      {id:'SEA3760D', name:'SEA3760D', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'10A', Battery:'Alkaline', Rechargeable:'',    ProgSeq:'NO',  Recording:'YES', RecordsDesc:'NO',  DataEntry:'NO',          RecallID:'NO',  Printer:'YES', Comms:'YES', ThreePhase:'YES', Weight:'0.8 kg', Case:'SOFT'},
+      {id:'MET3309B', name:'MET3309B', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'16A', Battery:'NiMh',     Rechargeable:'YES', ProgSeq:'YES', Recording:'YES', RecordsDesc:'YES', DataEntry:'APP',        RecallID:'APP', Printer:'YES', Comms:'YES', ThreePhase:'YES', Weight:'1.2 kg', Case:'NONE'},
+      {id:'MET03340', name:'MET03340', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'16A', Battery:'Li-Ion',   Rechargeable:'YES', ProgSeq:'YES', Recording:'YES', RecordsDesc:'YES', DataEntry:'TOUCH SCREEN',RecallID:'YES', Printer:'YES', Comms:'YES', ThreePhase:'YES', Weight:'1.7 kg', Case:'NONE'},
+      {id:'SEA01PRO', name:'SEA01PRO', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'16A', Battery:'NiMh',     Rechargeable:'YES', ProgSeq:'YES', Recording:'YES', RecordsDesc:'YES', DataEntry:'KEYPAD',     RecallID:'YES', Printer:'YES', Comms:'YES', ThreePhase:'YES', Weight:'1.2 kg', Case:'SOFT'},
+      {id:'SEA01ELT', name:'SEA01ELT', PortableRCD:'YES',                FixedRCD:'YES', Outlet:'15A', MaxLeak:'16A', Battery:'NiMh',     Rechargeable:'YES', ProgSeq:'YES', Recording:'YES', RecordsDesc:'YES', DataEntry:'KEYPAD',     RecallID:'YES', Printer:'YES', Comms:'YES', ThreePhase:'YES', Weight:'1.2 kg', Case:'NONE'}
+    ];
+
+    // Helpers
+    function normBool(v){ return String(v||'').toUpperCase().startsWith('Y'); }
+    function numLeak(v){ const n=parseInt(String(v).replace(/[^0-9]/g,''),10); return Number.isNaN(n)?0:n; }
+    function kg(v){ const n=parseFloat(String(v).replace(/[^0-9.]/g,'')); return Number.isNaN(n)?999:n; }
+
+    const PRODUCTS = RAW.map(r=>({
+      ...r,
+      b:{
+        PortableRCD: r.PortableRCD && String(r.PortableRCD).toUpperCase().startsWith('Y'),
+        FixedRCD: normBool(r.FixedRCD),
+        Printer: normBool(r.Printer),
+        Comms: normBool(r.Comms),
+        ThreePhase: normBool(r.ThreePhase),
+        Recording: normBool(r.Recording),
+        ProgSeq: normBool(r.ProgSeq),
+        Rechargeable: normBool(r.Rechargeable),
+      },
+      metrics:{ outlet: r.Outlet, maxLeak: numLeak(r.MaxLeak), weight: kg(r.Weight), battery: r.Battery }
+    }));
+
+    // State
+    const shortlist = new Set();
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._timer); toast._timer=setTimeout(()=>t.classList.remove('show'),1600); }
+
+    // Reasoning
+    function whyThis(p, req){
+      const reasons=[];
+      if(req.PortableRCD && p.b.PortableRCD) reasons.push('supports Portable RCD');
+      if(req.FixedRCD && p.b.FixedRCD) reasons.push('has Fixed RCD testing');
+      if(req.Printer && p.b.Printer) reasons.push('printer capable');
+      if(req.Comms && p.b.Comms) reasons.push('communications ready');
+      if(req.ThreePhase && p.b.ThreePhase) reasons.push('3-Phase leakage option');
+      if(req.Recording && p.b.Recording) reasons.push('records results');
+      if(req.ProgSeq && p.b.ProgSeq) reasons.push('programmable sequences');
+      if(req.Rechargeable && p.b.Rechargeable) reasons.push('rechargeable from mains');
+      if(req.outlet && p.metrics.outlet===req.outlet) reasons.push('outlet ' + p.metrics.outlet);
+      if(req.maxLeak && p.metrics.maxLeak>=req.maxLeak) reasons.push('max leakage ≥ ' + req.maxLeak + 'A');
+      if(req.maxWeight && p.metrics.weight<=req.maxWeight) reasons.push('≤ ' + req.maxWeight + ' kg');
+      if(req.battery && p.metrics.battery===req.battery) reasons.push(p.metrics.battery + ' battery');
+      return reasons.length?reasons.join(', '):'Closest overall match';
+    }
+
+    function renderBadges(p){
+      const b=p.b, arr=[];
+      if(b.PortableRCD) arr.push('Portable RCD');
+      if(b.FixedRCD) arr.push('Fixed RCD');
+      if(b.Printer) arr.push('Printer');
+      if(b.Comms) arr.push('Comms');
+      if(b.ThreePhase) arr.push('3-Phase');
+      if(b.Recording) arr.push('Recording');
+      if(b.ProgSeq) arr.push('Prog. Sequences');
+      if(b.Rechargeable) arr.push('Rechargeable');
+      return arr.map(x=>'<span class="badge">'+x+'</span>').join('');
+    }
+
+    // Filters
+    function getFilterReq(){
+      return {
+        q: ($('#q').value||'').trim().toLowerCase(),
+        PortableRCD: $('[data-key="PortableRCD"]').checked,
+        FixedRCD: $('[data-key="FixedRCD"]').checked,
+        Printer: $('[data-key="Printer"]').checked,
+        Comms: $('[data-key="Comms"]').checked,
+        ThreePhase: $('[data-key="ThreePhase"]').checked,
+        Recording: $('[data-key="Recording"]').checked,
+        ProgSeq: $('[data-key="ProgSeq"]').checked,
+        Rechargeable: $('[data-key="Rechargeable"]').checked,
+        outlet: $('#outlet').value,
+        maxLeak: $('#maxLeak').value? parseInt($('#maxLeak').value,10):0,
+        maxWeight: $('#maxWeight').value? parseFloat($('#maxWeight').value):0,
+        battery: $('#battery').value
+      };
+    }
+
+    function passes(p, req){
+      for(const key of ['PortableRCD','FixedRCD','Printer','Comms','ThreePhase','Recording','ProgSeq','Rechargeable']){
+        if(req[key] && !p.b[key]) return false;
+      }
+      if(req.q && !p.name.toLowerCase().includes(req.q)) return false;
+      if(req.outlet && p.metrics.outlet!==req.outlet) return false;
+      if(req.maxLeak && !(p.metrics.maxLeak>=req.maxLeak)) return false;
+      if(req.maxWeight && !(p.metrics.weight<=req.maxWeight)) return false;
+      if(req.battery && p.metrics.battery!==req.battery) return false;
+      return true;
+    }
+
+    function viewBtnHTML(p){
+      const href = BUY_URLS[p.id];
+      if(href){
+        return '<a class="btn ghost" href="'+href+'" target="_blank" rel="noopener noreferrer">View Product</a>';
+      }
+      return '<button class="btn ghost" disabled title="Coming soon">View Product</button>';
+    }
+
+    function renderCards(list, req, targetSel, countSel){
+      document.querySelector(countSel).textContent=list.length;
+      const html = list.map(p=>{
+        const reasons = whyThis(p, req);
+        return (
+          '<article class="product" aria-label="Product card">'+
+            '<div class="top">'+
+              '<div class="name">'+p.name+'</div>'+
+              '<div class="kicker">'+p.metrics.battery+' • '+p.metrics.weight+' • '+p.metrics.outlet+'</div>'+
+            '</div>'+
+            '<div class="badges">'+renderBadges(p)+'</div>'+
+            '<details><summary>Why this model</summary><div class="muted">'+reasons+'</div></details>'+
+            '<div class="actions">'+
+              '<button class="btn" type="button" onclick="addCompare(\''+p.id+'\')">Add to compare</button>'+
+              viewBtnHTML(p)+
+            '</div>'+
+          '</article>'
+        );
+      }).join('');
+      document.querySelector(targetSel).innerHTML = html || '<div class="note">No matches. Relax filters.</div>';
+    }
+
+    function renderTable(list){
+      const tbody = document.querySelector('#tableBody');
+      const html = list.map(p=>{
+        const b=p.b, m=p.metrics;
+        return (
+          '<tr>'+
+            '<td class="sticky-name">'+p.name+'</td>'+
+            '<td>'+(b.PortableRCD?'Yes':'No')+'</td>'+
+            '<td>'+(b.FixedRCD?'Yes':'No')+'</td>'+
+            '<td>'+(b.Printer?'Yes':'No')+'</td>'+
+            '<td>'+(b.Comms?'Yes':'No')+'</td>'+
+            '<td>'+(b.ThreePhase?'Yes':'No')+'</td>'+
+            '<td>'+(b.Recording?'Yes':'No')+'</td>'+
+            '<td>'+m.outlet+'</td>'+
+            '<td>'+m.maxLeak+'A</td>'+
+            '<td>'+m.battery+'</td>'+
+            '<td>'+m.weight+'</td>'+
+            '<td><button class="btn ghost" type="button" onclick="addCompare(\''+p.id+'\')">Add</button></td>'+
+            '<td>'+viewBtnHTML(p)+'</td>'+
+          '</tr>'
+        );
+      }).join('');
+      tbody.innerHTML = html || '<tr><td colspan="13"><div class="note">No matches. Relax filters.</div></td></tr>';
+    }
+
+    function filterProducts(){
+      const req=getFilterReq();
+      const list = PRODUCTS.filter(p=>passes(p,req));
+      renderCards(list, req, '#cardResults', '#matchCount');
+      renderTable(list);
+    }
+
+    // Compare
+    function addCompare(id){ shortlist.add(id); renderCompare(); toast('Added to compare'); }
+    function removeCompare(id){ shortlist.delete(id); renderCompare(); toast('Removed'); }
+    function renderCompare(){
+      const items = PRODUCTS.filter(p=>shortlist.has(p.id));
+      $('#compareEmpty').style.display = items.length? 'none':'block';
+      $('#compareWrap').style.display = items.length? 'block':'none';
+      const rows = items.map(p=>{
+        const b=p.b, m=p.metrics;
+        return (
+          '<tr>'+
+            '<td class="sticky-name"><strong>'+p.name+'</strong></td>'+
+            '<td>'+(b.PortableRCD?'Yes':'No')+'</td>'+
+            '<td>'+(b.FixedRCD?'Yes':'No')+'</td>'+
+            '<td>'+(b.Printer?'Yes':'No')+'</td>'+
+            '<td>'+(b.Comms?'Yes':'No')+'</td>'+
+            '<td>'+(b.ThreePhase?'Yes':'No')+'</td>'+
+            '<td>'+(b.Recording?'Yes':'No')+'</td>'+
+            '<td>'+p.DataEntry+'</td>'+
+            '<td>'+m.battery+'</td>'+
+            '<td>'+m.outlet+'</td>'+
+            '<td>'+m.maxLeak+'A</td>'+
+            '<td>'+m.weight+'</td>'+
+            '<td>'+p.Case+'</td>'+
+            '<td>'+viewBtnHTML(p)+'</td>'+
+            '<td><button class="btn ghost" type="button" onclick="removeCompare(\''+p.id+'\')">Remove</button></td>'+
+          '</tr>'
+        );
+      }).join('');
+      $('#compareBody').innerHTML = rows;
+    }
+
+    // Wizard
+    function runWizard(){
+      const req = {
+        Printer: $('#w_need_printer').checked,
+        ThreePhase: $('#w_need_three').checked,
+        Recording: $('#w_need_record').checked,
+        maxWeight: $('#w_max_w').value? parseFloat($('#w_max_w').value):0,
+        outlet: $('#w_outlet').value
+      };
+      const list = PRODUCTS.filter(p=>{
+        if(req.Printer && !p.b.Printer) return false;
+        if(req.ThreePhase && !p.b.ThreePhase) return false;
+        if(req.Recording && !p.b.Recording) return false;
+        if(req.maxWeight && !(p.metrics.weight<=req.maxWeight)) return false;
+        if(req.outlet && p.metrics.outlet!==req.outlet) return false;
+        return true;
+      });
+      $('#wizCount').textContent=list.length;
+      const html=list.map(p=>{
+        return (
+          '<article class="product">'+
+            '<div class="top"><div class="name">'+p.name+'</div><div class="kicker">'+p.metrics.battery+' • '+p.metrics.weight+' • '+p.metrics.outlet+'</div></div>'+
+            '<div class="badges">'+renderBadges(p)+'</div>'+
+            '<details><summary>Why this model</summary><div class="muted">'+whyThis(p, req)+'</div></details>'+
+            '<div class="actions">'+
+              '<button class="btn" type="button" onclick="addCompare(\''+p.id+'\')">Add to compare</button>'+
+              viewBtnHTML(p)+
+            '</div>'+
+          '</article>'
+        );
+      }).join('') || '<div class="note">No matches. Try relaxing constraints.</div>';
+      $('#wizResults').innerHTML = html;
+    }
+
+    // CSV Export
+    function csvEscape(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }
+    function exportCsv(){
+      const req=getFilterReq();
+      const list=PRODUCTS.filter(p=>passes(p,req));
+      if(!list.length){ alert('No results to export'); return; }
+      const cols=['Model','PortableRCD','FixedRCD','Printer','Comms','ThreePhase','Recording','DataEntry','Battery','Outlet','MaxLeak','Weight','Case'];
+      const rows=[cols.join(',')].concat(list.map(p=>[
+        csvEscape(p.name),csvEscape(p.b.PortableRCD?'Yes':'No'),csvEscape(p.b.FixedRCD?'Yes':'No'),csvEscape(p.b.Printer?'Yes':'No'),csvEscape(p.b.Comms?'Yes':'No'),csvEscape(p.b.ThreePhase?'Yes':'No'),csvEscape(p.b.Recording?'Yes':'No'),csvEscape(p.DataEntry),csvEscape(p.metrics.battery),csvEscape(p.metrics.outlet),csvEscape(p.metrics.maxLeak+'A'),csvEscape(p.metrics.weight),csvEscape(p.Case)
+      ].join(',')));
+      const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='pat-selector-results.csv'; a.click();
+    }
+
+    // Events
+    $$('.tab').forEach(btn=>btn.addEventListener('click',()=>{ $$('.tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const id=btn.dataset.tab; $$('.panel').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); }));
+    ['input','change'].forEach(evt=>{ $('#q').addEventListener(evt,filterProducts); $$('#filter .chip input').forEach(el=>el.addEventListener(evt,filterProducts)); ['outlet','maxLeak','maxWeight','battery'].forEach(id=>document.getElementById(id).addEventListener(evt,filterProducts)); });
+    (document.querySelector('#clearFilters')||{}).addEventListener?.('click',()=>{ $('#q').value=''; $$('#filter .chip input').forEach(el=>el.checked=false); ['outlet','maxLeak','maxWeight','battery'].forEach(id=>document.getElementById(id).value=''); filterProducts(); });
+    (document.querySelector('#exportCsv')||{}).addEventListener?.('click',exportCsv);
+    (document.querySelector('#runWizard')||{}).addEventListener?.('click',runWizard);
+    (document.querySelector('#showTable')||{}).addEventListener?.('change',e=>{ const on=e.target.checked; document.querySelector('#cardResults').style.display=on?'none':'grid'; document.querySelector('#tableResults').style.display=on?'block':'none'; });
+
+    // Initial render
+    filterProducts();
+    renderCompare();
+  </script>
+</body>
+</html>
